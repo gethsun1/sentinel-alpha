@@ -220,6 +220,33 @@ sentinel-alpha/
 
 This structure reflects **production-grade engineering discipline** and clean separation of concerns.
 
+```mermaid
+flowchart TD
+    %% Sentinel Alpha Architecture Diagram
+    A[Market Data Ingestion<br/>Binance API Demo] --> B[Feature Engineering<br/>Momentum, Volatility, Volume, Stability]
+    B --> C[Regime Classifier<br/>Predicts Market Regime]
+    C --> D[Confidence Model<br/>Assigns Confidence Scores]
+    D --> E[Risk Filter<br/>Applies Cooldowns, Volatility, Threshold Rules]
+    E --> F[Signal Engine<br/>Integrates Classifier, Confidence & Risk Filter]
+    F --> G[Final Signals<br/>LONG, SHORT, NO-TRADE]
+
+    %% Evaluation & Visualization
+    G --> H[Metrics Module<br/>Directional Accuracy, Drawdown, Signal Count]
+    G --> I[Visual Reports<br/>Price & Signals, Regime Distribution, Confidence Over Time]
+    G --> J[Demo Replay<br/>Historical Data Simulation for Review]
+
+    %% Notes
+    classDef data fill:#f9f,stroke:#333,stroke-width:1px,color:#000;
+    classDef ai fill:#fffa65,stroke:#333,stroke-width:1px,color:#000;
+    classDef strategy fill:#8dd3c7,stroke:#333,stroke-width:1px,color:#000;
+    classDef evaluation fill:#fdb462,stroke:#333,stroke-width:1px,color:#000;
+
+    class A,B data;
+    class C,D,E ai;
+    class F strategy;
+    class G,H,I,J evaluation;
+```
+
 ----------
 
 ## Demonstration & Proof
@@ -270,29 +297,4 @@ AI • Web3 • Trading Systems Research
 AI Wars: WEEX Alpha Awakens
 
 ----------
-
-flowchart TD
-    %% Sentinel Alpha Architecture Diagram
-    A[Market Data Ingestion<br/>Binance API Demo] --> B[Feature Engineering<br/>Momentum, Volatility, Volume, Stability]
-    B --> C[Regime Classifier<br/>Predicts Market Regime]
-    C --> D[Confidence Model<br/>Assigns Confidence Scores]
-    D --> E[Risk Filter<br/>Applies Cooldowns, Volatility, Threshold Rules]
-    E --> F[Signal Engine<br/>Integrates Classifier, Confidence & Risk Filter]
-    F --> G[Final Signals<br/>LONG, SHORT, NO-TRADE]
-
-    %% Evaluation & Visualization
-    G --> H[Metrics Module<br/>Directional Accuracy, Drawdown, Signal Count]
-    G --> I[Visual Reports<br/>Price & Signals, Regime Distribution, Confidence Over Time]
-    G --> J[Demo Replay<br/>Historical Data Simulation for Review]
-
-    %% Notes
-    classDef data fill:#f9f,stroke:#333,stroke-width:1px,color:#000;
-    classDef ai fill:#fffa65,stroke:#333,stroke-width:1px,color:#000;
-    classDef strategy fill:#8dd3c7,stroke:#333,stroke-width:1px,color:#000;
-    classDef evaluation fill:#fdb462,stroke:#333,stroke-width:1px,color:#000;
-
-    class A,B data;
-    class C,D,E ai;
-    class F strategy;
-    class G,H,I,J evaluation;
 

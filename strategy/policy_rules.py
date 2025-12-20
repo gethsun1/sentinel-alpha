@@ -1,8 +1,5 @@
 class PolicyRules:
-    """
-    Contains static parameters for risk management and compliance.
-    """
-
+ 
     def __init__(self):
         # Confidence threshold below which no trade is allowed
         self.min_confidence = 0.5

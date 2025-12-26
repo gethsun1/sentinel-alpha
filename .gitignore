@@ -1,0 +1,251 @@
+# ============================================================================
+# SENTINEL ALPHA - GIT IGNORE RULES
+# Protects sensitive data while allowing core code to be committed
+# ============================================================================
+
+# ============================================================================
+# SENSITIVE FILES - NEVER COMMIT
+# ============================================================================
+
+# Environment variables & credentials
+.env
+.env.*
+*.pem
+*.key
+
+# API keys and secrets (in filenames)
+*secret*
+*credential*
+*password*
+
+# ============================================================================
+# LOGS & DATA - EXCLUDE ALL TRADING LOGS
+# ============================================================================
+
+# Log files
+logs/
+*.log
+*.jsonl
+
+# Data files
+*.csv
+*.parquet
+*.hdf5
+
+# ============================================================================
+# DOCUMENTATION - EXCLUDE ALL .MD FILES EXCEPT APPROVED ONES
+# ============================================================================
+
+# Exclude ALL markdown files by default
+*.md
+
+# But INCLUDE these specific ones (override)
+!README.md
+!ARCHITECTURE_DIAGRAM.md
+
+# ============================================================================
+# PYTHON ENVIRONMENT & CACHE
+# ============================================================================
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ============================================================================
+# IDE & EDITOR FILES
+# ============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Cursor
+.cursor/
+
+# PyCharm
+.idea/
+*.iml
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+
+# ============================================================================
+# TEMPORARY & BACKUP FILES
+# ============================================================================
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# Backup files
+*_backup.*
+*.backup
+
+# ============================================================================
+# DEPLOYMENT SCRIPTS - EXCLUDE MOST, INCLUDE BASIC SETUP
+# ============================================================================
+
+# Exclude all shell scripts by default
+*.sh
+
+# But INCLUDE basic setup scripts (override)
+!setup_venv.sh
+!run_weex_test.sh
+
+# ============================================================================
+# PROJECT-SPECIFIC EXCLUSIONS
+# ============================================================================
+
+# Exclude VPS deployment tools
+*vps*.sh
+*VPS*.sh
+
+# Exclude monitoring/dashboard deployment scripts
+setup_monitoring.sh
+deploy_dashboard.sh
+deploy_bot.sh
+
+# Exclude IP/network tools
+monitor_ip.sh
+*ip_*.sh
+
+# Exclude fix/debug scripts
+fix_*.sh
+*debug*.sh
+update_*.sh
+upload_*.sh
+connect_*.sh
+
+# Exclude documentation guides (except approved .md files)
+*GUIDE.md
+*GUIDE.txt
+QUICK*.txt
+FINAL*.txt
+*FIX*.md
+*CHECKLIST*
+*SUMMARY*.md
+INDEX.md
+
+# Exclude debug scripts
+weex_debug.py
+
+# ============================================================================
+# DOCKER & INFRASTRUCTURE (if used later)
+# ============================================================================
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# ============================================================================
+# SECURITY & COMPLIANCE
+# ============================================================================
+
+# SSH keys
+id_rsa
+id_rsa.pub
+
+# SSL certificates
+*.crt
+*.cer
+
+# ============================================================================
+# WHAT GETS COMMITTED
+# ============================================================================
+
+# ✅ All .py files (core logic)
+# ✅ README.md
+# ✅ ARCHITECTURE_DIAGRAM.md
+# ✅ config/ directory
+# ✅ requirements.txt
+# ✅ setup_venv.sh & run_weex_test.sh
+# ✅ templates/ (for dashboard)
+#
+# ❌ .env (credentials)
+# ❌ logs/ (trading data)
+# ❌ venv/ (virtual environment)
+# ❌ All other .md files
+# ❌ Most .sh files
+# ❌ Sensitive/temporary files

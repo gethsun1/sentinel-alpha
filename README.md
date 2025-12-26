@@ -1,300 +1,541 @@
-----------
-# Sentinel Alpha
+# 🤖 Sentinel Alpha
 
-**Real-Time AI Market Regime Intelligence for Disciplined Crypto Trading**
+**AI-Powered Autonomous Trading System for Cryptocurrency Markets**
 
-----------
+![Status](https://img.shields.io/badge/status-live-brightgreen) ![Competition](https://img.shields.io/badge/WEEX-AI%20Wars-blue) ![Python](https://img.shields.io/badge/python-3.10+-blue)
 
-## Overview
+---
 
-**Sentinel Alpha** is an AI-driven market intelligence system that analyzes real-time cryptocurrency market data to detect short-term market regimes and generate **explainable, risk-aware trading signals**.
+## 🏆 Competition Entry
 
-The project is designed with a strict separation between **market intelligence** and **trade execution**, prioritizing transparency, auditability, and risk discipline. Sentinel Alpha is submitted for the **AI Wars: WEEX Alpha Awakens** hackathon, using **Binance exchange market data** for demonstration and verification during the review phase.
+**WEEX AI Wars: Alpha Awakens**  
+A fully autonomous, AI-driven trading system competing in the WEEX cryptocurrency trading competition.
 
-----------
+**Live Trading:** ✅ Operational on VPS with static IP  
+**Exchange:** WEEX Contract Trading API  
+**Asset:** BTC/USDT Perpetual Contracts  
+**Status:** 🟢 ACTIVE
 
-## Design Philosophy
+---
 
-> _The market speaks continuously.  
-> Intelligence listens patiently and acts selectively._
+## 🎯 Overview
 
-Sentinel Alpha is built on four non-negotiable principles:
+**Sentinel Alpha** is a production-grade, AI-powered autonomous trading system that combines:
 
-1.  **AI informs decisions; it does not gamble**
-    
-2.  **Risk controls dominate signal ambition**
-    
-3.  **Execution is external and rule-based**
-    
-4.  **Every signal must be explainable**
-    
+- 🧠 **Advanced AI Intelligence** - Enhanced regime classification with fuzzy logic
+- 📊 **Real-Time Market Analysis** - Live data ingestion from WEEX API
+- 🛡️ **5-Layer Risk Management** - Comprehensive capital protection
+- 🔄 **Adaptive Learning** - Self-improving through online learning
+- 📈 **Autonomous Execution** - 24/7 automated trading with full audit trail
 
-This philosophy aligns with professional trading system standards and WEEX competition requirements.
+### Key Features
 
-----------
+✅ **Real-Time Market Intelligence**
+- Live price/volume/volatility data streaming
+- Advanced feature engineering (momentum, stability, acceleration)
+- Multi-regime detection (TREND_UP/DOWN, RANGE, VOLATILITY_EXPANSION/COMPRESSION)
 
-## What Sentinel Alpha Is — and Is Not
+✅ **AI-Driven Decision Making**
+- Enhanced regime classifier with fuzzy logic
+- Confidence-based signal generation
+- Adaptive learning from trade outcomes
+- Pattern recognition and ensemble methods
 
-### What It Is
+✅ **Professional Risk Management**
+- PnL Guard: 2% max drawdown auto-halt
+- Execution Guard: Cooldown periods & position limits
+- Policy Rules: Compliance enforcement
+- Position Sizing: Confidence-based dynamic sizing
+- Volatility Filter: Risk-aware signal blocking
 
--   A real-time AI **market regime detection** engine
-    
--   A **signal-generation system**, not an autonomous trader
-    
--   A research-grade, reviewable trading intelligence framework
-    
+✅ **24/7 Autonomous Operation**
+- Deployed on VPS with static IP
+- Self-monitoring and error handling
+- Complete audit logging (JSON)
+- Web dashboard for real-time monitoring
 
-### What It Is Not
+---
 
--   Not a high-leverage trading bot
-    
--   Not a black-box profit optimizer
-    
--   Not a self-learning system reacting to live PnL
-    
+## 🏗️ System Architecture
 
-----------
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SENTINEL ALPHA SYSTEM                    │
+└─────────────────────────────────────────────────────────────┘
 
-## System Scope (Demo Phase)
+┌─────────────────┐
+│  WEEX Exchange  │
+│   Market Data   │◄──────┐
+└─────────────────┘       │
+                          │
+┌─────────────────────────┴───────────────────────────────────┐
+│                  DATA INGESTION LAYER                       │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ • Real-time price/volume streaming (60s intervals)  │   │
+│  │ • Feature engineering (momentum, volatility, accel) │   │
+│  │ • Historical data buffer (100 data points)          │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   AI INTELLIGENCE LAYER                      │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Enhanced Regime Classifier (Fuzzy Logic)            │   │
+│  │ • TREND_UP / TREND_DOWN / RANGE                     │   │
+│  │ • VOLATILITY_EXPANSION / COMPRESSION                │   │
+│  │                                                      │   │
+│  │ Adaptive Learning Agent                             │   │
+│  │ • Track win rates per signal type                   │   │
+│  │ • Dynamic confidence calibration                    │   │
+│  │ • Online learning from outcomes                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    SIGNAL ENGINE LAYER                       │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Signal Generation → LONG / SHORT / NO-TRADE         │   │
+│  │ Confidence Scoring → 0.0-1.0 (threshold: 0.70)      │   │
+│  │ Explainable Reasoning → Human-readable rationale    │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 RISK MANAGEMENT LAYER (5 Levels)             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ 1. PnL Guard: Max 2% drawdown auto-halt             │   │
+│  │ 2. Execution Guard: Cooldown & position limits      │   │
+│  │ 3. Policy Rules: Leverage/compliance enforcement    │   │
+│  │ 4. Position Sizer: Confidence-based sizing          │   │
+│  │ 5. Volatility Filter: Spike detection & blocking    │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   EXECUTION LAYER                            │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ WEEX API Integration                                 │   │
+│  │ • Authenticated requests (HMAC-SHA256)              │   │
+│  │ • Automatic leverage setting (4×)                   │   │
+│  │ • Limit order placement                             │   │
+│  │ • Order status tracking                             │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  MONITORING & LOGGING                        │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ • JSON audit logs (signals, trades, performance)    │   │
+│  │ • Real-time web dashboard (Flask)                   │   │
+│  │ • Performance metrics tracking                      │   │
+│  │ • Alert system for critical events                  │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
--   **Market data source:** Binance (public market data via API)
-    
--   **Assets:** High-liquidity pairs (BTC, ETH, SOL, etc.)
-    
--   **Time horizon:** Short-term (seconds to minutes)
-    
--   **Signal types:** LONG / SHORT / NO-TRADE
-    
--   **Execution:** External, rule-based, and intentionally decoupled
-    
+See [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) for detailed system design.
 
-No private account balances or sensitive credentials are required for review.
+---
 
-----------
+## 🧠 AI Intelligence System
 
-## High-Level Architecture
+### Enhanced Regime Classifier
 
-Sentinel Alpha operates as a modular pipeline:
+**Technology:** Fuzzy logic with weighted scoring system
 
-1.  **Market Data Ingestion**  
-    Continuous collection of price, volume, and volatility data from Binance.
-    
-2.  **Feature Engineering**  
-    Transformation of raw market data into normalized, model-ready signals.
-    
-3.  **AI Intelligence Layer**
-    
-    -   Market regime classification
-        
-    -   Confidence estimation
-        
-    -   Risk-aware filtering
-        
-4.  **Signal Engine**  
-    Emits explainable trade signals only when all validation gates are passed.
-    
-5.  **Audit & Evaluation Layer**  
-    Logs, metrics, and visual artifacts for review and reproducibility.
-    
+**Regimes Detected:**
+- `TREND_UP` - Sustained upward momentum with stability
+- `TREND_DOWN` - Sustained downward momentum with stability
+- `RANGE` - Mean-reverting price behavior
+- `VOLATILITY_EXPANSION` - Rapid increase in price dispersion
+- `VOLATILITY_COMPRESSION` - Low-energy consolidation phase
 
-----------
+**Advantages over threshold-based systems:**
+- Handles uncertain/transitional market states
+- Gradual regime transitions vs hard boundaries
+- More robust to noise and false signals
 
-## Market Regime Framework
+### Adaptive Learning Agent
 
-The system models markets as evolving states rather than static indicators.
+**Capability:** Online learning from trade outcomes
 
-Example regimes include:
+**Features:**
+- Tracks win rates for LONG/SHORT signals independently
+- Dynamically calibrates confidence thresholds
+- Adapts to changing market conditions
+- Self-improves over time
 
--   **TREND_UP** — sustained upward momentum
-    
--   **TREND_DOWN** — sustained downward momentum
-    
--   **RANGE** — mean-reverting price behavior
-    
--   **VOLATILITY_EXPANSION** — rapid increase in price dispersion
-    
--   **VOLATILITY_COMPRESSION** — low-energy consolidation
-    
+**Learning Process:**
+```
+Trade → Outcome → Win Rate Update → Confidence Calibration → Better Signals
+```
 
-Signals are generated **only when a regime is stable and confidence exceeds predefined thresholds**.
+---
 
-----------
+## 📊 Performance Metrics
 
-## AI Participation (Explicit Disclosure)
+### Target Performance (Competition)
 
-### Role of AI
+| Metric | Target | Control |
+|--------|--------|---------|
+| Daily ROI | 0.5-2% | Conservative growth |
+| Win Rate | 55-65% | Slight edge over random |
+| Max Drawdown | <2% | Auto-halt protection |
+| Trades/Day | 3-15 | Quality over quantity |
+| Leverage | 4× | Moderate risk |
 
-Artificial Intelligence in Sentinel Alpha is used exclusively for:
+### Risk Controls
 
--   Classifying short-term market regimes
-    
--   Estimating confidence in detected patterns
-    
--   Blocking signals during unstable or high-risk conditions
-    
+- ✅ Maximum position: 0.001 BTC
+- ✅ Cooldown: 180s between trades
+- ✅ Min confidence: 70% for execution
+- ✅ Auto-halt: If drawdown ≥2%
+- ✅ Volatility filter: Block during spikes
 
-### Explicit AI Limitations
+---
 
-AI **does not**:
+## 🚀 Deployment
 
--   Determine position size
-    
--   Modify leverage or risk limits
-    
--   Execute trades autonomously
-    
--   Self-optimize based on live profit or loss
-    
+### Infrastructure
 
-This ensures **control, interpretability, and compliance**.
+- **Platform:** RackNerd KVM VPS
+- **Location:** Los Angeles Data Center
+- **IP:** Static (allowlisted with WEEX)
+- **Uptime:** 24/7 operation in tmux sessions
+- **Monitoring:** Web dashboard + JSON logs
 
-----------
+### Technology Stack
 
-## Risk & Compliance Controls
+```python
+# Core
+Python 3.10+
+pandas, numpy          # Data processing
+requests              # API communication
 
--   Conceptual leverage capped at **≤ 20×**
-    
--   No martingale, grid, or averaging-down logic
-    
--   Cooldown periods after consecutive losses
-    
--   Volatility spike detection blocks signals
-    
--   Minimum signal count enforced (≥ 10)
-    
+# Configuration
+pyyaml                # Config management
+python-dotenv         # Credential management
 
-Risk management is embedded at the **system level**, not added as an afterthought.
+# Monitoring
+Flask                 # Web dashboard
+```
 
-----------
+### Live Operation
 
-## Evaluation Metrics
+```bash
+# Bot runs in tmux
+tmux attach -t trading
 
-System performance is assessed using:
+# Dashboard accessible at
+http://[VPS_IP]:5000
 
--   Directional signal accuracy
-    
--   Maximum drawdown
-    
--   Volatility-adjusted return proxy
-    
--   Signal-to-noise ratio
-    
--   Regime stability duration
-    
--   Trade frequency compliance
-    
+# Logs stored in
+logs/live_trades.jsonl
+logs/live_signals.jsonl
+logs/performance.jsonl
+```
 
-Metrics are designed to reflect **robustness and discipline**, not hype.
+---
 
-----------
-
-## Repository Structure
+## 📁 Repository Structure
 
 ```
 sentinel-alpha/
 │
+├── agent/
+│   ├── sentinel_agent.py          # Main autonomous agent
+│   ├── memory.py                  # Adaptive memory module
+│   └── explainer.py               # Decision explainability
+│
 ├── data/
-│   ├── market_stream.py          # Binance market data ingestion
-│   └── feature_engineering.py    # Streaming feature extraction
+│   ├── market_stream.py           # Real-time data ingestion
+│   └── feature_engineering.py     # Feature extraction
 │
 ├── models/
-│   ├── regime_classifier.py      # Market regime AI model
-│   ├── confidence_model.py       # Signal confidence estimation
-│   └── risk_filter.py            # Volatility & cooldown gating
+│   ├── regime_classifier.py       # Basic regime classifier
+│   ├── enhanced_regime_classifier.py  # Fuzzy logic classifier
+│   ├── confidence_model.py        # Confidence scoring
+│   ├── adaptive_learning_agent.py # Online learning
+│   └── risk_filter.py             # Risk filtering
 │
 ├── strategy/
-│   ├── signal_engine.py          # Signal generation logic
-│   └── policy_rules.py           # Risk & compliance rules
+│   ├── signal_engine.py           # Signal generation
+│   ├── policy_rules.py            # Compliance rules
+│   └── position_sizer.py          # Position sizing
+│
+├── execution/
+│   ├── weex_adapter.py            # WEEX API integration
+│   └── execution_guard.py         # Execution controls
+│
+├── risk/
+│   └── pnl_guard.py               # Drawdown protection
 │
 ├── evaluation/
-│   ├── metrics.py                # Performance & risk metrics
-│   └── visual_reports.py         # Charts & visual summaries
+│   ├── metrics.py                 # Performance metrics
+│   └── visual_reports.py          # Visualization
 │
-├── demo/
-│   ├── historical_replay.py      # Market data replay for demo
-│   └── signal_logs.csv           # Time-stamped signal outputs
+├── utils/
+│   └── logger.py                  # JSON logging
 │
-└── README.md
-
+├── config/
+│   └── competition.yaml           # Competition config
+│
+├── live_trading_bot.py            # Main live trading script
+├── monitor_dashboard.py           # Web monitoring dashboard
+└── ai_enhanced_engine.py          # AI-enhanced demo
 ```
 
-This structure reflects **production-grade engineering discipline** and clean separation of concerns.
+---
 
-```mermaid
-flowchart TD
-    %% Sentinel Alpha Architecture Diagram
-    A[Market Data Ingestion<br/>Binance API Demo] --> B[Feature Engineering<br/>Momentum, Volatility, Volume, Stability]
-    B --> C[Regime Classifier<br/>Predicts Market Regime]
-    C --> D[Confidence Model<br/>Assigns Confidence Scores]
-    D --> E[Risk Filter<br/>Applies Cooldowns, Volatility, Threshold Rules]
-    E --> F[Signal Engine<br/>Integrates Classifier, Confidence & Risk Filter]
-    F --> G[Final Signals<br/>LONG, SHORT, NO-TRADE]
+## 🛡️ Security & Compliance
 
-    %% Evaluation & Visualization
-    G --> H[Metrics Module<br/>Directional Accuracy, Drawdown, Signal Count]
-    G --> I[Visual Reports<br/>Price & Signals, Regime Distribution, Confidence Over Time]
-    G --> J[Demo Replay<br/>Historical Data Simulation for Review]
+### Credential Management
 
-    %% Notes
-    classDef data fill:#f9f,stroke:#333,stroke-width:1px,color:#000;
-    classDef ai fill:#fffa65,stroke:#333,stroke-width:1px,color:#000;
-    classDef strategy fill:#8dd3c7,stroke:#333,stroke-width:1px,color:#000;
-    classDef evaluation fill:#fdb462,stroke:#333,stroke-width:1px,color:#000;
+- ✅ API keys stored in `.env` (not in repository)
+- ✅ Environment variables for sensitive data
+- ✅ HMAC-SHA256 signature for API authentication
+- ✅ IP allowlisting with WEEX
 
-    class A,B data;
-    class C,D,E ai;
-    class F strategy;
-    class G,H,I,J evaluation;
+### Audit Trail
+
+All trading activity is logged:
+```json
+{
+  "timestamp": 1766774396,
+  "signal": "LONG",
+  "confidence": 0.752,
+  "regime": "TREND_UP",
+  "price": 87400.50,
+  "order_id": "699502522531840447",
+  "reasoning": "Strong uptrend with 75% confidence"
+}
 ```
 
-----------
+### Compliance
 
-## Demonstration & Proof
+- ✅ Leverage ≤ 20× (competition requirement)
+- ✅ No prohibited strategies (martingale, grid, etc.)
+- ✅ Minimum 10 trades requirement
+- ✅ Risk disclosure and transparency
+- ✅ Explainable AI decisions
 
-For hackathon review, Sentinel Alpha provides:
+---
 
--   Time-stamped signal logs
-    
--   Annotated market charts
-    
--   Risk and performance summaries
-    
--   Optional screen recordings or visual walkthroughs
-    
+## 🎯 Competition Strategy
 
-All demonstrations use **public Binance market data** and do not expose sensitive credentials.
+### Phase 1: Data Collection (Ticks 1-20)
+Building market history for AI analysis
 
-----------
+### Phase 2: Conservative Trading (Days 1-3)
+- Low-frequency, high-confidence trades
+- System calibration
+- Risk validation
 
-## Future Extension (Post-Approval)
+### Phase 3: Adaptive Trading (Days 4-7)
+- Learning agent optimizes thresholds
+- Increased trade frequency
+- Performance acceleration
 
-After WEEX allowlisting:
+### Phase 4: Optimized Trading (Days 8-10)
+- Fully calibrated system
+- Maximum efficiency
+- Competitive performance
 
--   The same intelligence engine can be connected to WEEX APIs
-    
--   Execution adapters can be added without altering AI logic
-    
--   Multi-exchange support can be enabled
-    
--   Real-time streaming architectures (e.g., Kafka/Confluent) can be integrated
-    
+---
 
-The system is intentionally **exchange-agnostic by design**.
+## 📊 Monitoring Dashboard
 
-----------
+Real-time web interface showing:
 
-## Disclaimer
+- 🟢 **Bot Status** - Active/Offline indicator
+- 💰 **Account Balance** - Equity & P&L
+- 📈 **Performance** - ROI & Drawdown
+- 🎯 **Signals** - Recent decisions with reasoning
+- 💼 **Trades** - Execution history
 
-This project is provided for **research, demonstration, and hackathon evaluation purposes only**.  
-It does not constitute financial advice and does not guarantee profitability.
+**Access:** Web browser at `http://[VPS_IP]:5000`  
+**Updates:** Auto-refresh every 5 seconds
 
-----------
+---
 
-## Author
+## 🔧 Configuration
+
+### Competition Settings
+
+```yaml
+# config/competition.yaml
+exchange:
+  name: "WEEX"
+  symbol: "cmt_btcusdt"
+  leverage: 4
+  max_position_size: 0.001
+
+risk:
+  max_trades_per_hour: 20
+  min_confidence: 0.70
+  max_drawdown_pct: 0.02
+  cooldown_seconds: 180
+```
+
+### Environment Variables
+
+```bash
+# .env (not in repository)
+WEEX_API_KEY=your_api_key_here
+WEEX_SECRET_KEY=your_secret_key_here
+WEEX_PASSPHRASE=your_passphrase_here
+```
+
+---
+
+## 📈 Expected Performance
+
+### Conservative Estimates
+
+**Daily Performance:**
+- ROI: 0.5-2%
+- Trades: 3-15
+- Win Rate: 55-65%
+
+**10-Day Competition:**
+- Starting Capital: $1,000
+- Target ROI: 5-20%
+- Expected Ending: $1,050-$1,200
+- Max Drawdown: <2%
+
+### Competitive Advantages
+
+1. **AI Enhancement** - Advanced regime detection
+2. **Adaptive Learning** - Self-improvement over time
+3. **Risk Management** - 5-layer protection system
+4. **Transparency** - Fully explainable decisions
+5. **Reliability** - Professional infrastructure
+
+---
+
+## 🧪 Testing & Validation
+
+### Pre-Deployment Testing
+
+✅ API connectivity tests  
+✅ Authentication verification  
+✅ Order placement validation  
+✅ Risk control verification  
+✅ Logging system validation
+
+### Live Validation
+
+✅ Real-time data streaming  
+✅ Signal generation accuracy  
+✅ Execution reliability  
+✅ Risk management activation  
+✅ Performance tracking
+
+---
+
+## 📚 Documentation
+
+- **README.md** - This file (system overview)
+- **ARCHITECTURE_DIAGRAM.md** - Detailed system design
+- **Code Comments** - Inline documentation throughout
+
+---
+
+## 🚦 System Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| WEEX API | 🟢 Connected | IP allowlisted |
+| Data Ingestion | 🟢 Active | 60s intervals |
+| AI Engine | 🟢 Running | Enhanced classifier |
+| Risk Guards | 🟢 Active | 5-layer protection |
+| Execution | 🟢 Operational | Automated orders |
+| Monitoring | 🟢 Live | Web dashboard |
+| Logging | 🟢 Recording | JSON audit trail |
+
+**Overall:** 🟢 **FULLY OPERATIONAL**
+
+---
+
+## 🏆 Competition Goals
+
+### Primary Objectives
+1. ✅ Achieve positive ROI (5-20%)
+2. ✅ Maintain low drawdown (<2%)
+3. ✅ Demonstrate AI capability
+4. ✅ Provide full transparency
+5. ✅ Complete competition duration
+
+### Success Metrics
+- **Technical:** System reliability & uptime
+- **Performance:** ROI vs drawdown ratio
+- **Innovation:** AI enhancement quality
+- **Transparency:** Audit trail completeness
+
+---
+
+## ⚖️ Disclaimer
+
+This project is developed for **competition and educational purposes**.
+
+- ❌ Not financial advice
+- ❌ No guaranteed profits
+- ❌ Trading involves risk
+- ✅ For research and demonstration only
+
+**Past performance does not guarantee future results.**
+
+---
+
+## 👨‍💻 Author
 
 **Gethsun Misesi**  
-AI • Web3 • Trading Systems Research  
-AI Wars: WEEX Alpha Awakens
+AI Researcher • Trading Systems Engineer  
 
-----------
+**Competition:** WEEX AI Wars: Alpha Awakens  
+**Contact:** [GitHub Profile]
 
+---
+
+## 📜 License
+
+This project is proprietary software developed for the WEEX AI Wars competition.
+
+**All rights reserved.**
+
+---
+
+## 🙏 Acknowledgments
+
+- **WEEX Team** - For hosting the AI Wars competition
+- **Python Community** - For excellent data science tools
+- **Open Source Contributors** - For pandas, numpy, Flask
+
+---
+
+## 📞 Support
+
+For competition-related inquiries:
+- Review the documentation files
+- Check system logs for debugging
+- Verify API connectivity
+- Monitor dashboard for status
+
+---
+
+<div align="center">
+
+**🤖 Sentinel Alpha - Intelligent, Autonomous, Transparent**
+
+![Built with Python](https://img.shields.io/badge/built%20with-Python-blue)
+![AI Powered](https://img.shields.io/badge/AI-Powered-brightgreen)
+![Status Live](https://img.shields.io/badge/status-LIVE-success)
+
+**Competing in WEEX AI Wars 2025**
+
+</div>

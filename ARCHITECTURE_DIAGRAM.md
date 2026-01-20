@@ -89,6 +89,29 @@
                                          │
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
+│                      3B. LLM ENHANCEMENT LAYER (NEW)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────┐             │
+│  │  LLaMA-2-7B (Q4_K_M GGUF)                                  │             │
+│  ├────────────────────────────────────────────────────────────┤             │
+│  │  Model: /opt/llm_models/llama-2-7b/llama-2-7b-chat.gguf   │             │
+│  │  Size: 3.8 GB (4-bit quantized)                           │             │
+│  │  Inference: ~6s per decision                              │             │
+│  │                                                            │             │
+│  │  Capabilities:                                             │             │
+│  │  • interpret_regime() - Natural language market analysis  │             │
+│  │  • calibrate_confidence() - AI confidence adjustments     │             │
+│  │  • assess_risk() - Contextual risk evaluation             │             │
+│  │  • explain_position_size() - Sizing rationale             │             │
+│  │                                                            │             │
+│  │  Integration: models/llm_integration.py                   │             │
+│  └────────────────────────────────────────────────────────────┘             │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
 │                         4. SIGNAL ENGINE LAYER                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
@@ -116,19 +139,44 @@
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
 │  │  PolicyRules     │  │  ExecutionGuard  │  │  PnLGuard        │          │
 │  ├──────────────────┤  ├──────────────────┤  ├──────────────────┤          │
-│  │ • Min confidence │  │ • Cooldown: 180s │  │ • Max DD: 2.0%   │          │
-│  │ • Max leverage   │  │ • Position limit │  │ • Auto halt      │          │
+│  │ • Min confidence │  │ • Cooldown: 300s │  │ • Max DD: 2.0%   │          │
+│  │   (0.62 optimized)│  │ • Position limit │  │ • Auto halt      │          │
+│  │ • Max leverage   │  │ • Notional cap   │  │ • Equity tracking│          │
 │  │ • Vol threshold  │  │ • Trade tracking │  │                  │          │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+│                                  │                                           │
+│                                  ▼                                           │
+│                    ┌──────────────────────────────┐                         │
+│                    │  Dynamic Leverage Resolver   │                         │
+│                    ├──────────────────────────────┤                         │
+│                    │  • 10-20× based on:          │                         │
+│                    │    - Confidence (0.62+)      │                         │
+│                    │    - Regime (TREND boost)    │                         │
+│                    │    - Volatility constraints  │                         │
+│                    └──────────────────────────────┘                         │
 │                                  │                                           │
 │                                  ▼                                           │
 │                         ┌─────────────────┐                                 │
 │                         │  PositionSizer  │                                 │
 │                         ├─────────────────┤                                 │
-│                         │ size = base ×   │                                 │
-│                         │ confidence ×    │                                 │
-│                         │ adaptive_factor │                                 │
+│                         │ Risk-based with │                                 │
+│                         │ ATR stop-loss   │                                 │
+│                         │ Portfolio cap:  │                                 │
+│                         │ 3% max risk     │                                 │
 │                         └─────────────────┘                                 │
+│                                  │                                           │
+│                                  ▼                                           │
+│                    ┌──────────────────────────────┐                         │
+│                    │  TPSLCalculator (NEW)        │                         │
+│                    ├──────────────────────────────┤                         │
+│                    │  • Partial TP levels:        │                         │
+│                    │    - TP1: 30% @ 1.5× ATR     │                         │
+│                    │    - TP2: 40% @ 3.0× ATR     │                         │
+│                    │    - Runner: 30% (trailing)  │                         │
+│                    │  • Noise-absorption SL:      │                         │
+│                    │    - Delayed activation      │                         │
+│                    │    - 3s or 0.4× ATR trigger  │                         │
+│                    └──────────────────────────────┘                         │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                                          │
@@ -142,14 +190,24 @@
 │  ├────────────────────────────────────────────────────────────┤             │
 │  │  • API: https://api-contract.weex.com                      │             │
 │  │  • Authentication: HMAC-SHA256                             │             │
-│  │  • Symbols: cmt_btcusdt, cmt_ethusdt, ...                 │             │
+│  │  • Symbols: cmt_btcusdt, cmt_ethusdt, cmt_xrpusdt, etc.   │             │
 │  │  • Order types: Limit only                                 │             │
-│  │  • Leverage: ≤ 20×                                         │             │
+│  │  • Leverage: ≤ 20× (dynamic 10-20×)                       │             │
 │  │  • Dry-run mode: Available                                 │             │
 │  │                                                            │             │
 │  │  Methods:                                                  │             │
 │  │  • set_leverage()                                          │             │
-│  │  • place_order(direction, size, price)                    │             │
+│  │  • place_order(direction, size, price, tpsl)              │             │
+│  │  • place_tp_sl_order(plan_type, price, size, side)        │             │
+│  │  • get_positions(), get_account_assets()                  │             │
+│  └────────────────────────────────────────────────────────────┘             │
+│                                         │                                    │
+│  ┌────────────────────────────────────────────────────────────┐             │
+│  │  AILogAdapter (NEW)                                        │             │
+│  ├────────────────────────────────────────────────────────────┤             │
+│  │  • Submit AI decisions to WEEX API                         │             │
+│  │  • Compliance logging for competition                      │             │
+│  │  • Structured input/output data format                     │             │
 │  └────────────────────────────────────────────────────────────┘             │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -311,9 +369,6 @@ competition.yaml
 ## Module Dependencies
 
 ```
-utils/logger.py
-    └─▶ strategy/signal_engine.py
-
 data/market_stream.py
     └─▶ data/feature_engineering.py
         └─▶ models/regime_classifier.py
@@ -321,13 +376,23 @@ data/market_stream.py
                 └─▶ models/risk_filter.py
                     └─▶ strategy/signal_engine.py
 
+models/llm_integration.py (NEW)
+    ├─▶ strategy/signal_engine.py
+    └─▶ execution/ai_log_adapter.py
+
+strategy/tpsl_calculator.py (NEW)
+    └─▶ live_trading_bot.py (trade execution)
+
 execution/execution_guard.py
     └─▶ strategy/signal_engine.py
         └─▶ agent/sentinel_agent.py
 
 execution/weex_adapter.py
-    └─▶ strategy/signal_engine.py
-        └─▶ agent/sentinel_agent.py
+    ├─▶ strategy/signal_engine.py
+    └─▶ live_trading_bot.py
+
+execution/ai_log_adapter.py (NEW)
+    └─▶ live_trading_bot.py (post-trade logging)
 
 risk/pnl_guard.py
     └─▶ agent/sentinel_agent.py

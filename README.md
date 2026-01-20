@@ -97,7 +97,7 @@ A fully autonomous, AI-driven trading system competing in the WEEX cryptocurrenc
 │                    SIGNAL ENGINE LAYER                       │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │ Signal Generation → LONG / SHORT / NO-TRADE         │   │
-│  │ Confidence Scoring → 0.0-1.0 (threshold: 0.70)      │   │
+│  │ Confidence Scoring → 0.0-1.0 (threshold: 0.62)      │   │
 │  │ Explainable Reasoning → Human-readable rationale    │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
@@ -144,6 +144,34 @@ See [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) for detailed system desig
 
 ## 🧠 AI Intelligence System
 
+### LLaMA-2 Integration (NEW)
+
+**Model:** LLaMA-2-7B (4-bit quantized GGUF)
+
+**Location:** `/opt/llm_models/llama-2-7b/llama-2-7b-chat.Q4_K_M.gguf`
+
+**Purpose:** AI-enhanced reasoning for trading decisions
+
+**Capabilities:**
+- 🎯 **Regime Interpretation** - Natural language market analysis
+- 📊 **Confidence Calibration** - AI-assisted confidence adjustments
+- 🛡️ **Risk Assessment** - Contextual risk evaluation
+- 💡 **Position Sizing Rationale** - Explainable sizing decisions
+
+**Performance:**
+- Model size: 3.8 GB (optimized for VPS deployment)
+- Inference time: ~6s per decision
+- Resource usage: 6GB RAM, 6 CPU cores
+
+**Integration:**
+```python
+from models.llm_integration import LLMIntegration
+
+llm = LLMIntegration()
+reasoning = llm.interpret_regime('TREND_UP', market_data)
+risk_assessment = llm.assess_risk(signal, market_data, positions)
+```
+
 ### Enhanced Regime Classifier
 
 **Technology:** Fuzzy logic with weighted scoring system
@@ -187,15 +215,18 @@ Trade → Outcome → Win Rate Update → Confidence Calibration → Better Sign
 | Win Rate | 55-65% | Slight edge over random |
 | Max Drawdown | <2% | Auto-halt protection |
 | Trades/Day | 3-15 | Quality over quantity |
-| Leverage | 4× | Moderate risk |
+| Leverage | 10-20× | Dynamic based on confidence |
 
 ### Risk Controls
 
-- ✅ Maximum position: 0.001 BTC
-- ✅ Cooldown: 180s between trades
-- ✅ Min confidence: 70% for execution
+- ✅ Dynamic leverage: 10-20× (confidence + regime based)
+- ✅ Position sizing: Risk-based with ATR stops
+- ✅ Cooldown: 300s between trades per symbol
+- ✅ Min confidence: **62%** for execution (optimized threshold)
 - ✅ Auto-halt: If drawdown ≥2%
-- ✅ Volatility filter: Block during spikes
+- ✅ Portfolio risk cap: 3% across all positions
+- ✅ Partial TP/SL: 30% TP1, 40% TP2, 30% runner
+- ✅ Noise absorption: Delayed SL activation (3s or 0.4× ATR)
 
 ---
 
@@ -259,6 +290,7 @@ sentinel-alpha/
 ├── models/
 │   ├── regime_classifier.py       # Basic regime classifier
 │   ├── enhanced_regime_classifier.py  # Fuzzy logic classifier
+│   ├── llm_integration.py         # 🆕 LLaMA-2 integration
 │   ├── confidence_model.py        # Confidence scoring
 │   ├── adaptive_learning_agent.py # Online learning
 │   └── risk_filter.py             # Risk filtering
@@ -266,11 +298,13 @@ sentinel-alpha/
 ├── strategy/
 │   ├── signal_engine.py           # Signal generation
 │   ├── policy_rules.py            # Compliance rules
-│   └── position_sizer.py          # Position sizing
+│   ├── position_sizer.py          # Position sizing
+│   └── tpsl_calculator.py         # 🆕 TP/SL calculation
 │
 ├── execution/
 │   ├── weex_adapter.py            # WEEX API integration
-│   └── execution_guard.py         # Execution controls
+│   ├── execution_guard.py         # Execution controls
+│   └── ai_log_adapter.py          # 🆕 AI log submission
 │
 ├── risk/
 │   └── pnl_guard.py               # Drawdown protection
@@ -283,11 +317,13 @@ sentinel-alpha/
 │   └── logger.py                  # JSON logging
 │
 ├── config/
-│   └── competition.yaml           # Competition config
+│   ├── competition.yaml           # Competition config
+│   └── model_config.py            # 🆕 LLM configuration
 │
-├── live_trading_bot.py            # Main live trading script
+├── live_trading_bot.py            # Main live trading script (multi-symbol)
+├── live_trading_bot_aggressive.py # Alternative aggressive configuration
 ├── monitor_dashboard.py           # Web monitoring dashboard
-└── ai_enhanced_engine.py          # AI-enhanced demo
+└── ai_enhanced_engine.py          # AI-enhanced signal engine
 ```
 
 ---
@@ -301,6 +337,27 @@ sentinel-alpha/
 - ✅ HMAC-SHA256 signature for API authentication
 - ✅ IP allowlisting with WEEX
 
+### AI Log Compliance (NEW)
+
+All AI decisions are logged to WEEX API for competition compliance:
+```json
+{
+  "input_data": {
+    "price": 96500.0,
+    "regime": "TREND_UP",
+    "volatility": 0.015,
+    "momentum": 0.002
+  },
+  "output_data": {
+    "signal": "LONG",
+    "confidence": 0.65,
+    "leverage": 15,
+    "reasoning": "Strong uptrend with moderate volatility"
+  },
+  "orderId": 699502522531840447
+}
+```
+
 ### Audit Trail
 
 All trading activity is logged:
@@ -308,7 +365,7 @@ All trading activity is logged:
 {
   "timestamp": 1766774396,
   "signal": "LONG",
-  "confidence": 0.752,
+  "confidence": 0.65,
   "regime": "TREND_UP",
   "price": 87400.50,
   "order_id": "699502522531840447",

@@ -1,0 +1,25 @@
+[Unit]
+Description=Sentinel Alpha - WEEX AI Trading Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/sentinel-alpha
+Environment="PATH=/root/sentinel-alpha/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EnvironmentFile=/root/sentinel-alpha/.env
+ExecStartPre=/bin/bash -c 'timedatectl status | grep "synchronized: yes" || (echo "Time not synchronized!"; exit 1)'
+ExecStartPre=/usr/bin/python3 -c "from execution.mode import is_competition_mode; assert is_competition_mode(), 'Not in competition mode!'"
+ExecStart=/root/sentinel-alpha/venv/bin/python3 live_trading_bot_aggressive.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/root/sentinel-alpha/logs/bot_stdout.log
+StandardError=append:/root/sentinel-alpha/logs/bot_stderr.log
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=7G
+
+[Install]
+WantedBy=multi-user.target

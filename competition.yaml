@@ -1,0 +1,26 @@
+mode: competition          # competition | live | dry_run
+
+exchange:
+  name: weex
+  symbol: cmt_btcusdt
+  leverage: 2
+  max_position_size: 0.002
+  cooldown_seconds: 180
+
+risk:
+  max_trades_per_hour: 5
+  min_confidence: 0.65
+  max_drawdown_pct: 2.0
+
+logging:
+  audit_path: logs/audit.jsonl
+  compliance_path: logs/compliance.jsonl
+
+# AI & LLM Configuration
+ai:
+  llm_enabled: true
+  llm_model_path: /opt/llm_models/llama-2-7b
+  llm_model_file: llama-2-7b-chat.Q4_K_M.gguf
+  llm_fallback_mode: continue  # continue | halt - what to do if LLM fails
+  llm_n_threads: 4
+  llm_n_ctx: 2048

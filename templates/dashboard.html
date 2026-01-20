@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel Alpha - Live Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .status-active {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-inactive {
+            background: #ef4444;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            opacity: 0.9;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .metric {
+            margin: 15px 0;
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .metric-value.positive {
+            color: #10b981;
+        }
+        
+        .metric-value.negative {
+            color: #ef4444;
+        }
+        
+        .metric-value.neutral {
+            color: #fff;
+        }
+        
+        .table-container {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .signal-long {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .signal-short {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        .signal-no-trade {
+            color: #94a3b8;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+            height: 300px;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            background: #10b981;
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.1);
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 SENTINEL ALPHA</h1>
+            <p>Live Trading Dashboard - WEEX AI Wars Competition</p>
+            <div id="status-badge" class="status-badge status-inactive">⏳ LOADING...</div>
+            <div id="status-message" style="margin-top: 10px; font-size: 1.2em; font-weight: bold;">--</div>
+            <div id="improvement-note" style="margin-top: 5px; font-size: 1.0em; color: #fbbf24;">--</div>
+            <p style="margin-top: 10px; font-size: 0.9em;" id="last-update">Last Update: --</p>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">💰 ACCOUNT BALANCE</div>
+                <div class="metric">
+                    <div class="metric-label">Current Equity</div>
+                    <div class="metric-value neutral" id="equity">$--</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Total P&L</div>
+                    <div class="metric-value neutral" id="pnl">$--</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">📊 PERFORMANCE</div>
+                <div class="metric">
+                    <div class="metric-label">ROI</div>
+                    <div class="metric-value neutral" id="roi">--%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Drawdown</div>
+                    <div class="metric-value neutral" id="drawdown">--%</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">📈 TRADING STATS</div>
+                <div class="metric">
+                    <div class="metric-label">Total Trades</div>
+                    <div class="metric-value neutral" id="trades">--</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Win Rate</div>
+                    <div class="metric-value neutral" id="winrate">--%</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">🎯 SIGNALS</div>
+                <div class="metric">
+                    <div class="metric-label">Total Signals</div>
+                    <div class="metric-value neutral" id="total-signals">--</div>
+                </div>
+                <div class="metric" style="font-size: 0.9em; margin-top: 20px;">
+                    <span class="signal-long">LONG: <span id="long-count">0</span></span> |
+                    <span class="signal-short">SHORT: <span id="short-count">0</span></span> |
+                    <span class="signal-no-trade">NO-TRADE: <span id="notrade-count">0</span></span>
+                </div>
+                <div class="metric" style="border-top: 2px solid rgba(255,255,255,0.3); padding-top: 15px; margin-top: 15px;">
+                    <div class="metric-label">TRADE SIGNAL %</div>
+                    <div class="metric-value" id="trade-signal-pct" style="color: #fbbf24;">0%</div>
+                    <div style="font-size: 0.7em; opacity: 0.7; margin-top: 5px;">Before Fix: 0% | Target: >5%</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="card-title">🔔 RECENT SIGNALS</div>
+            <table id="signals-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Signal</th>
+                        <th>Confidence</th>
+                        <th>Regime</th>
+                        <th>Reasoning</th>
+                    </tr>
+                </thead>
+                <tbody id="signals-body">
+                    <tr><td colspan="5" class="loading">⏳ Loading signals...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="table-container">
+            <div class="card-title">💼 RECENT TRADES</div>
+            <table id="trades-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Direction</th>
+                        <th>Size</th>
+                        <th>Price</th>
+                        <th>Order ID</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-body">
+                    <tr><td colspan="5" class="loading">⏳ Waiting for trades...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>🏆 Sentinel Alpha © 2025 | WEEX AI Wars Competition</p>
+            <p>Auto-refreshes every 5 seconds</p>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="fetchData()">🔄 REFRESH</button>
+    
+    <script>
+        function formatNumber(num, decimals = 2) {
+            if (num === null || num === undefined) return '--';
+            return Number(num).toFixed(decimals);
+        }
+        
+        function fetchData() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update status badge
+                    const badge = document.getElementById('status-badge');
+                    if (data.bot_running) {
+                        badge.textContent = '🟢 BOT ACTIVE';
+                        badge.className = 'status-badge status-active';
+                    } else {
+                        badge.textContent = '🔴 BOT OFFLINE';
+                        badge.className = 'status-badge status-inactive';
+                    }
+                    
+                    // Update last update time
+                    document.getElementById('last-update').textContent = 
+                        'Last Update: ' + data.last_update;
+                    
+                    // Update status message and improvement note
+                    if (data.status_message) {
+                        document.getElementById('status-message').textContent = data.status_message;
+                    }
+                    if (data.improvement_note) {
+                        document.getElementById('improvement-note').textContent = data.improvement_note;
+                    }
+                    
+                    // Update performance metrics
+                    const perf = data.performance;
+                    if (perf && Object.keys(perf).length > 0) {
+                        document.getElementById('equity').textContent = 
+                            '$' + formatNumber(perf.equity, 2);
+                        
+                        const pnl = perf.total_pnl || 0;
+                        const pnlEl = document.getElementById('pnl');
+                        pnlEl.textContent = '$' + formatNumber(pnl, 2);
+                        pnlEl.className = 'metric-value ' + 
+                            (pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : 'neutral');
+                        
+                        const roi = (perf.roi || 0) * 100;
+                        const roiEl = document.getElementById('roi');
+                        roiEl.textContent = formatNumber(roi, 2) + '%';
+                        roiEl.className = 'metric-value ' + 
+                            (roi > 0 ? 'positive' : roi < 0 ? 'negative' : 'neutral');
+                        
+                        const dd = (perf.drawdown || 0) * 100;
+                        const ddEl = document.getElementById('drawdown');
+                        ddEl.textContent = formatNumber(dd, 2) + '%';
+                        ddEl.className = 'metric-value ' + 
+                            (dd > 1 ? 'negative' : 'neutral');
+                        
+                        document.getElementById('trades').textContent = perf.trades || 0;
+                        
+                        const wr = (perf.win_rate || 0) * 100;
+                        const wrEl = document.getElementById('winrate');
+                        wrEl.textContent = formatNumber(wr, 1) + '%';
+                        wrEl.className = 'metric-value ' + 
+                            (wr >= 50 ? 'positive' : wr > 0 ? 'neutral' : 'neutral');
+                    }
+                    
+                    // Update signal counts
+                    document.getElementById('total-signals').textContent = 
+                        data.total_signals || 0;
+                    document.getElementById('long-count').textContent = 
+                        data.signal_distribution.LONG || 0;
+                    document.getElementById('short-count').textContent = 
+                        data.signal_distribution.SHORT || 0;
+                    document.getElementById('notrade-count').textContent = 
+                        data.signal_distribution['NO-TRADE'] || 0;
+                    
+                    // Update trade signal percentage
+                    if (data.trade_signal_percentage !== undefined) {
+                        const pct = data.trade_signal_percentage;
+                        const pctEl = document.getElementById('trade-signal-pct');
+                        pctEl.textContent = formatNumber(pct, 1) + '%';
+                        // Color code based on performance
+                        if (pct > 10) {
+                            pctEl.style.color = '#10b981'; // Green
+                        } else if (pct > 3) {
+                            pctEl.style.color = '#fbbf24'; // Yellow
+                        } else {
+                            pctEl.style.color = '#ef4444'; // Red
+                        }
+                    }
+                    
+                    // Update recent signals table
+                    const signalsBody = document.getElementById('signals-body');
+                    if (data.recent_signals && data.recent_signals.length > 0) {
+                        signalsBody.innerHTML = data.recent_signals.map(sig => {
+                            const signalClass = sig.signal === 'LONG' ? 'signal-long' : 
+                                              sig.signal === 'SHORT' ? 'signal-short' : 
+                                              'signal-no-trade';
+                            return `
+                                <tr>
+                                    <td>${sig.timestamp_formatted || '--'}</td>
+                                    <td class="${signalClass}">${sig.signal || '--'}</td>
+                                    <td>${formatNumber(sig.confidence, 3)}</td>
+                                    <td>${sig.regime || '--'}</td>
+                                    <td style="font-size: 0.85em;">${sig.reasoning || '--'}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    } else {
+                        signalsBody.innerHTML = 
+                            '<tr><td colspan="5" class="loading">⏳ Waiting for signals... (Need 20 data points)</td></tr>';
+                    }
+                    
+                    // Update recent trades table
+                    const tradesBody = document.getElementById('trades-body');
+                    if (data.recent_trades && data.recent_trades.length > 0) {
+                        tradesBody.innerHTML = data.recent_trades.map(trade => {
+                            // Map fields: signal->direction, size->size, price->price
+                            const direction = trade.signal || trade.direction || '--';
+                            const dirClass = direction === 'LONG' ? 'signal-long' : 'signal-short';
+                            const size = trade.size || trade.size_btc || 0;
+                            const price = trade.price || trade.limit_price || 0;
+                            const pair = trade.pair || '';
+                            
+                            return `
+                                <tr>
+                                    <td>${trade.timestamp_formatted || '--'}</td>
+                                    <td class="${dirClass}">${direction}</td>
+                                    <td>${formatNumber(size, 4)}</td>
+                                    <td>$${formatNumber(price, 2)}</td>
+                                    <td style="font-size: 0.85em;">${trade.order_id || '--'}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    } else {
+                        tradesBody.innerHTML = 
+                            '<tr><td colspan="5" class="loading">⏳ Waiting for trades...</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+        
+        // Initial fetch
+        fetchData();
+        
+        // Auto-refresh every 5 seconds
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>
+

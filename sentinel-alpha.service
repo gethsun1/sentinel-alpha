@@ -1,0 +1,25 @@
+[Unit]
+Description=Sentinel Alpha WEEX Trading Bot (Unified)
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/sentinel-alpha
+Environment="PATH=/root/sentinel-alpha/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=/root/sentinel-alpha/.env
+# Wrapper script handles env loading
+ExecStart=/root/sentinel-alpha/start_bot.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/root/sentinel-alpha/logs/combined_bots.log
+StandardError=append:/root/sentinel-alpha/logs/combined_bots.log
+
+# Resource limits (Higher for unified bot)
+MemoryLimit=2G
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

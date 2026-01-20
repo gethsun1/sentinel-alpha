@@ -1,0 +1,17 @@
+mode: competition          # competition | live | dry_run
+
+exchange:
+  name: weex
+  symbol: cmt_btcusdt
+  leverage: 2
+  max_position_size: 0.002
+  cooldown_seconds: 180
+
+risk:
+  max_trades_per_hour: 5
+  min_confidence: 0.65
+  max_drawdown_pct: 2.0
+
+logging:
+  audit_path: logs/audit.jsonl
+  compliance_path: logs/compliance.jsonl

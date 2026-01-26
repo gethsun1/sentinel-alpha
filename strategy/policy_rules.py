@@ -2,7 +2,7 @@ class PolicyRules:
  
     def __init__(self):
         # Confidence threshold below which no trade is allowed
-        self.min_confidence = 0.5
+        self.min_confidence = 0.65
 
         # Maximum allowed conceptual leverage
         self.max_leverage = 20

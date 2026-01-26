@@ -33,9 +33,9 @@ class AdaptiveLearningAgent:
             'SHORT': {'wins': 0, 'losses': 0, 'total_pnl': 0.0}
         }
         
-        # Adaptive thresholds (learned online) - OPTIMIZED FOR QUALITY
-        self.confidence_threshold = 0.62  # Raised from 0.55 to filter marginal trades
-        self.min_confidence = 0.62  # Target 80% win rate
+        # Adaptive thresholds (learned online) - OPTIMIZED FOR COMPETITION
+        self.confidence_threshold = 0.60  # Optimized to 0.60 for 2-3 trades/day/symbol
+        self.min_confidence = 0.58  # Floor with calibration headroom
         self.max_confidence = 0.75  # Maximum allowed (was 0.9)
         
         # Market condition memory
@@ -201,7 +201,7 @@ class AdaptiveLearningAgent:
         
         # Base boost for having any signal (encourages trading)
         if signal in ['LONG', 'SHORT']:
-            calibrated += 0.08  # NEW: Base boost for taking action
+            calibrated += 0.12  # INCREASED: Base boost for taking action (was 0.08)
         
         # Adjust based on regime-specific win rate
         regime_win_rate = self.get_regime_win_rate(regime)
@@ -214,10 +214,10 @@ class AdaptiveLearningAgent:
         calibrated += signal_adjustment
         
         # Adjust based on momentum/pattern alignment (MORE GENEROUS)
-        if signal == 'LONG' and market_patterns['momentum_strength'] > 0.3:  # Lowered from 0.6
-            calibrated += 0.08  # Increased from 0.05
-        elif signal == 'SHORT' and market_patterns['momentum_strength'] > 0.3:
-            calibrated += 0.08
+        if signal == 'LONG' and market_patterns['momentum_strength'] > 0.25:  # Lowered from 0.3
+            calibrated += 0.10  # Increased from 0.08
+        elif signal == 'SHORT' and market_patterns['momentum_strength'] > 0.25:
+            calibrated += 0.10
         
         # Penalize if reversal likely (LESS STRICT)
         if market_patterns['reversal_probability'] > 0.8:  # Increased from 0.7

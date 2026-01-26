@@ -75,12 +75,17 @@ class TPSLCalculator:
         if entry_price <= 0 or volatility_atr <= 0:
             raise ValueError(f"Invalid entry_price or ATR: entry={entry_price}, ATR={volatility_atr}")
         
+        # Step 1.5: Apply ATR Floor (Noise-Absorption Guard)
+        # Prevents stops from being too tight in low-volatility regimes
+        min_atr = entry_price * 0.012  # 1.2% floor
+        effective_atr = max(volatility_atr, min_atr)
+        
         # Step 1: Determine regime-based multipliers
         sl_mult, tp_mult = self._get_regime_multipliers(regime, confidence)
         
         # Step 2: Calculate SL and TP distances based on ATR
-        sl_distance = volatility_atr * sl_mult
-        tp_distance = volatility_atr * tp_mult
+        sl_distance = effective_atr * sl_mult
+        tp_distance = effective_atr * tp_mult
         
         # Step 3: Apply confidence scaling
         # Higher confidence = willing to take more risk for better reward
@@ -134,19 +139,19 @@ class TPSLCalculator:
         regime = regime.upper()
         
         if regime == 'TREND_UP' or regime == 'TREND_DOWN':
-            # Trending markets: wider stops, capture full move
-            sl_mult = 1.5 * self.base_sl_multiplier
-            tp_mult = 3.0 * self.base_tp_multiplier
+            # Trending markets: wider stops to avoid noise, capture full move
+            sl_mult = 2.5 * self.base_sl_multiplier  # Increased from 1.5
+            tp_mult = 5.0 * self.base_tp_multiplier  # Increased from 3.0 (maintain 2:1 RR)
             
         elif regime == 'RANGE' or regime == 'MEAN_REVERSION':
-            # Range-bound: widened stops to avoid premature exit
-            sl_mult = 1.2 * self.base_sl_multiplier
-            tp_mult = 1.5 * self.base_tp_multiplier
+            # Range-bound: widened stops to avoid premature exit from noise
+            sl_mult = 2.0 * self.base_sl_multiplier  # Increased from 1.2
+            tp_mult = 3.5 * self.base_tp_multiplier  # Increased from 1.5
             
         elif regime == 'VOLATILITY_COMPRESSION':
-            # Low volatility: widened stops to resist ticker noise
-            sl_mult = 1.1 * self.base_sl_multiplier
-            tp_mult = 1.2 * self.base_tp_multiplier
+            # Low volatility: widened stops to resist ticker noise and spread
+            sl_mult = 1.8 * self.base_sl_multiplier  # Increased from 1.1
+            tp_mult = 3.0 * self.base_tp_multiplier  # Increased from 1.2
             
         elif regime == 'HIGH_VOLATILITY' or regime == 'VOLATILE':
             # High volatility: wider stops to avoid whipsaw
@@ -321,9 +326,10 @@ class TPSLCalculator:
             df['tr'] = (df['price'] - df['prev_price']).abs()
             atr = df['tr'].rolling(window=period).mean().iloc[-1]
             
-            # Enforce minimum ATR (0.3% of price) to prevent ultra-tight stops on tick data
+            # Enforce minimum ATR (1.2% of price) to survive crypto market noise
+            # Crypto markets routinely have 0.5-1% intraday swings
             current_price = df['price'].iloc[-1]
-            min_atr = current_price * 0.003
+            min_atr = current_price * 0.012  # Increased from 0.003 (4x wider)
             if atr < min_atr:
                 atr = min_atr
             

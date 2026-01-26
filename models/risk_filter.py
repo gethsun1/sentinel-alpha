@@ -33,9 +33,9 @@ class RiskFilter:
                 self.cooldown_counter -= 1
                 continue
 
-            # Confidence threshold gating - LOWERED FOR COMPETITION
-            # Previous 0.5 was too high, now 0.35
-            if score < 0.35:
+            # Confidence threshold gating - Updated to match system-wide threshold
+            # Minimum confidence required: 0.65
+            if score < 0.65:
                 filtered_signals.append('NO-TRADE')
                 continue
 

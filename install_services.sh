@@ -17,11 +17,12 @@ fi
 WORK_DIR="/root/sentinel-alpha"
 cd "$WORK_DIR"
 
-echo "Step 1: Stopping old template services..."
+# Step 1: Legacy cleanup handled during archive process.
+# Combined logs and rotation are managed in sentinel-alpha.service
+echo "Step 1: Preparing system..."
 systemctl stop sentinel-alpha@* || true
 systemctl disable sentinel-alpha@* || true
-rm /etc/systemd/system/sentinel-alpha@.service || true
-echo "✓ Old services removed"
+echo "✓ System prepared"
 echo ""
 
 echo "Step 2: Installing new unified service..."

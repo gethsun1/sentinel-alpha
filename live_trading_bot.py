@@ -131,6 +131,16 @@ class SentinelLiveTradingBot:
         self.sync_state()
         self.pnl_guard.update(self.current_equity)
         self.peak_equity = max(self.peak_equity, self.current_equity)
+        
+        # Automatic Hedge Consolidation
+        # Note: consolidate_hedged_positions() method needs to be implemented.
+        # This call assumes self.positions is correctly populated by sync_state()
+        # and that the method exists to handle potential hedged positions.
+        # If 'pos_dict' was intended to be passed, it would need to be defined.
+        # Assuming the intent is to run consolidation after initial sync.
+        # self.positions = pos_dict # This line was in the instruction but 'pos_dict' is not defined here.
+        self.consolidate_hedged_positions() # This method needs to be implemented.
+        
         self.log_performance()
         print(f"✓ Bot initialized for {len(symbols)} symbols: {symbols}\n")
 
@@ -296,6 +306,58 @@ class SentinelLiveTradingBot:
             'range_pct': range_pct,
             'bid_ask_spread_pct': spread
         }
+    
+    def consolidate_hedged_positions(self):
+        """
+        Detect and consolidate hedged positions (LONG + SHORT on same symbol).
+        Automatically closes both sides when net exposure is below 5%.
+        """
+        # Group positions by symbol (WEEX may return duplicate symbols with opposite directions)
+        symbol_groups = {}
+        for symbol, size in self.positions.items():
+            if symbol not in symbol_groups:
+                symbol_groups[symbol] = []
+            symbol_groups[symbol].append(size)
+        
+        # Detect and consolidate hedges
+        for symbol, sizes in symbol_groups.items():
+            if len(sizes) < 2:
+                continue  # No hedge possible with single position
+            
+            # Calculate net position
+            net_size = sum(sizes)
+            total_abs = sum(abs(s) for s in sizes)
+            
+            # Check if hedged (opposing positions exist)
+            has_long = any(s > 0 for s in sizes)
+            has_short = any(s < 0 for s in sizes)
+            
+            if has_long and has_short and total_abs > 0:
+                # Calculate net exposure as % of total
+                net_exposure_pct = abs(net_size) / total_abs * 100 if total_abs > 0 else 0
+                
+                # Consolidate if net exposure < 5%
+                if net_exposure_pct < 5.0:
+                    logger.warning(f"🔄 [{symbol}] HEDGE DETECTED: Net {net_size:.4f}, Total {total_abs:.4f} ({net_exposure_pct:.1f}% net)")
+                    logger.info(f"   Consolidating to eliminate funding waste...")
+                    
+                    try:
+                        self.adapter.symbol = symbol
+                        result = self.adapter.close_all_positions(symbol)
+                        
+                        if result and isinstance(result, list):
+                            success_count = sum(1 for r in result if r.get('success'))
+                            logger.info(f"   ✓ Closed {success_count} hedged positions on {symbol}")
+                            
+                            # Update local state
+                            self.positions[symbol] = 0.0
+                            if symbol in self.active_trades:
+                                self.active_trades[symbol] = []
+                        else:
+                            logger.warning(f"   ⚠️  Hedge consolidation failed for {symbol}: {result}")
+                    
+                    except Exception as e:
+                        logger.error(f"   Error consolidating hedge on {symbol}: {e}")
 
     def determine_trade_class(self, regime: str, confidence: float) -> str:
         regime_upper = str(regime).upper()
@@ -542,21 +604,58 @@ class SentinelLiveTradingBot:
                         logger.warning(f"Delayed SL placement failed for {symbol}: {sl_res}")
                 continue
 
-            # 2. Move to Breakeven (Profit Protection)
-            if not trade.get('breakeven_set') and breakeven_trigger:
-                if self._hit_target(current_price, breakeven_trigger, direction):
-                    # Target price for breakeven is the entry price
-                    be_price = self.round_price_to_step(entry_price, price_step)
+            # 2. Tiered Trailing Stops (Profit Protection)
+            # Calculate current ROI
+            if direction == 'LONG':
+                roi_pct = ((current_price - entry_price) / entry_price) * 100
+            else:  # SHORT
+                roi_pct = ((entry_price - current_price) / entry_price) * 100
+            
+            # Determine profit lock tier based on ROI
+            if roi_pct >= 25:
+                lock_tier = 5  # Lock 8%
+            elif roi_pct >= 20:
+                lock_tier = 4  # Lock 5%
+            elif roi_pct >= 15:
+                lock_tier = 3  # Lock 3%
+            elif roi_pct >= 10:
+                lock_tier = 2  # Lock 1%
+            elif roi_pct >= 5:
+                lock_tier = 1  # Breakeven
+            else:
+                lock_tier = 0  # No protection yet
+            
+            current_tier = trade.get('profit_lock_tier', 0)
+            
+            # Only upgrade (never downgrade) protection
+            if lock_tier > current_tier:
+                # Calculate new SL price based on tier
+                tier_profit_pcts = {0: None, 1: 0.0, 2: 1.0, 3: 3.0, 4: 5.0, 5: 8.0}
+                new_sl_profit_pct = tier_profit_pcts.get(lock_tier, 0.0)
+                
+                if new_sl_profit_pct is not None:
+                    # Calculate new SL price
+                    if direction == 'LONG':
+                        new_sl = entry_price * (1 + new_sl_profit_pct / 100)
+                    else:  # SHORT
+                        new_sl = entry_price * (1 - new_sl_profit_pct / 100)
+                    
+                    # Round to price step
+                    new_sl_rounded = self.round_price_to_step(new_sl, price_step)
                     rounded_size, _, _ = self.round_size_to_rules(symbol, full_size)
                     
+                    # Place new SL
                     self.adapter.symbol = symbol
-                    be_res = self.adapter.place_tp_sl_order('loss_plan', be_price, rounded_size, 'long' if direction == 'LONG' else 'short')
+                    result = self.adapter.place_tp_sl_order('loss_plan', new_sl_rounded, rounded_size, 'long' if direction == 'LONG' else 'short')
                     
-                    if self._tp_sl_success(be_res):
-                        logger.info(f"[{symbol}] Profit threshold hit. SL moved to Breakeven @ {be_price}")
-                        trade['breakeven_set'] = True
+                    if self._tp_sl_success(result):
+                        trade['profit_lock_tier'] = lock_tier
+                        trade['locked_profit_pct'] = new_sl_profit_pct
+                        tier_name = {1: "Breakeven", 2: "1% Lock", 3: "3% Lock", 4: "5% Lock", 5: "8% Lock"}.get(lock_tier, "")
+                        logger.info(f"🔒 [{symbol}] {tier_name}: SL→{new_sl_rounded} ({new_sl_profit_pct:+.1f}% locked, ROI: {roi_pct:.1f}%)")
                     else:
-                        logger.warning(f"[{symbol}] Failed to move SL to breakeven: {be_res}")
+                        logger.warning(f"[{symbol}] Failed to upgrade SL to tier {lock_tier}: {result}")
+
 
     def fetch_tick(self, symbol: str):
         ticker = self.adapter.get_ticker(symbol)
@@ -663,6 +762,11 @@ class SentinelLiveTradingBot:
                     try:
                         self.refresh_account_state() # Refresh Equity & Positions
                         self.log_performance()
+                        
+                        # Consolidate hedged positions every hour to prevent funding fee waste
+                        if self.loop_count % 360 == 0:  # Every 360 cycles = ~1 hour
+                            logger.info("🔄 Running periodic hedge consolidation...")
+                            self.consolidate_hedged_positions()
                     except: pass
                     open_positions = len([p for p in self.positions.values() if abs(p) > 0])
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] 💓 Cycle Active | Equity: ${self.current_equity:.2f} | Positions: {open_positions}")

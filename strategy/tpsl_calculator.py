@@ -29,7 +29,7 @@ class TPSLCalculator:
                  min_rr_ratio: float = 1.2,
                  max_rr_ratio: float = 3.0,
                  base_sl_multiplier: float = 1.0,
-                 base_tp_multiplier: float = 2.0):
+                 base_tp_multiplier: float = 1.0):
         """
         Initialize TP/SL calculator.
         
@@ -77,7 +77,7 @@ class TPSLCalculator:
         
         # Step 1.5: Apply ATR Floor (Noise-Absorption Guard)
         # Prevents stops from being too tight in low-volatility regimes
-        min_atr = entry_price * 0.012  # 1.2% floor
+        min_atr = entry_price * 0.004  # Blitz Floor: 0.4% (was 0.6%)
         effective_atr = max(volatility_atr, min_atr)
         
         # Step 1: Determine regime-based multipliers
@@ -139,29 +139,29 @@ class TPSLCalculator:
         regime = regime.upper()
         
         if regime == 'TREND_UP' or regime == 'TREND_DOWN':
-            # Trending markets: wider stops to avoid noise, capture full move
-            sl_mult = 2.5 * self.base_sl_multiplier  # Increased from 1.5
-            tp_mult = 5.0 * self.base_tp_multiplier  # Increased from 3.0 (maintain 2:1 RR)
+            # Trending markets: Blitz scalping
+            sl_mult = 1.0 * self.base_sl_multiplier
+            tp_mult = 2.5 * self.base_tp_multiplier
             
         elif regime == 'RANGE' or regime == 'MEAN_REVERSION':
-            # Range-bound: widened stops to avoid premature exit from noise
-            sl_mult = 2.0 * self.base_sl_multiplier  # Increased from 1.2
-            tp_mult = 3.5 * self.base_tp_multiplier  # Increased from 1.5
+            # Range-bound: tight scalping range
+            sl_mult = 0.7 * self.base_sl_multiplier
+            tp_mult = 1.5 * self.base_tp_multiplier
             
         elif regime == 'VOLATILITY_COMPRESSION':
-            # Low volatility: widened stops to resist ticker noise and spread
-            sl_mult = 1.8 * self.base_sl_multiplier  # Increased from 1.1
-            tp_mult = 3.0 * self.base_tp_multiplier  # Increased from 1.2
+            # Compression: very tight scalps
+            sl_mult = 0.6 * self.base_sl_multiplier
+            tp_mult = 1.2 * self.base_tp_multiplier
             
         elif regime == 'HIGH_VOLATILITY' or regime == 'VOLATILE':
-            # High volatility: wider stops to avoid whipsaw
-            sl_mult = 2.0 * self.base_sl_multiplier
-            tp_mult = 3.5 * self.base_tp_multiplier
+            # High volatility: slightly wider but still tight
+            sl_mult = 0.9 * self.base_sl_multiplier
+            tp_mult = 2.0 * self.base_tp_multiplier
             
         else:
-            # Unknown/default regime: conservative approach
-            sl_mult = 1.0 * self.base_sl_multiplier
-            tp_mult = 2.0 * self.base_tp_multiplier
+            # Unknown/default regime: scalp-focused
+            sl_mult = 0.8 * self.base_sl_multiplier
+            tp_mult = 1.5 * self.base_tp_multiplier
         
         return sl_mult, tp_mult
     
@@ -299,37 +299,26 @@ class TPSLCalculator:
         Calculate Average True Range (ATR) from DataFrame.
         """
         try:
-            if len(df) < period + 1:
+            length = len(df)
+            if length < 10:
                 return 0.0
                 
+            # Use dynamic period if history is short but > 10
+            adj_period = min(period, length - 1)
+            
             high = df['price'] # Approximation if H/L not available, or use H/L if available
             low = df['price']
             close = df['price']
             
-            # If df has high/low/close columns, use them. 
-            # Sentinel bot df usually has 'price' (from ticker). 
-            # If only 'price' (last) is available, TR is just price movement?
-            # Standard ATR requires High/Low. 
-            # Let's check live_trading_bot.py market_data structure.
-            # market_data keys: 'timestamp', 'price', 'volume', 'bid', 'ask'.
-            # We DON'T have High/Low candles. We only have ticker snaps.
-            # So ATR on 'price' is just volatility of 'price'. 
-            # TR = abs(price - prev_price) usually?
-            # Or use std * factor?
-            
-            # Approximation for ticker data:
-            # TR = abs(current_price - prev_price)
-            # ATR = Rolling mean of TR
-            
             df = df.copy()
             df['prev_price'] = df['price'].shift(1)
             df['tr'] = (df['price'] - df['prev_price']).abs()
-            atr = df['tr'].rolling(window=period).mean().iloc[-1]
+            atr = df['tr'].rolling(window=adj_period).mean().iloc[-1]
             
-            # Enforce minimum ATR (1.2% of price) to survive crypto market noise
+            # Enforce minimum ATR (0.4% of price) for fast scalping
             # Crypto markets routinely have 0.5-1% intraday swings
             current_price = df['price'].iloc[-1]
-            min_atr = current_price * 0.012  # Increased from 0.003 (4x wider)
+            min_atr = current_price * 0.004  # Blitz Floor: 0.4%
             if atr < min_atr:
                 atr = min_atr
             

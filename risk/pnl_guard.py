@@ -22,3 +22,17 @@ class PnLGuard:
 
     def can_trade(self) -> bool:
         return not self.trading_halted
+
+    def reset(self):
+        """
+        Full reset of the guard state.
+        """
+        self.peak_equity = None
+        self.trading_halted = False
+
+    def force_unhalt(self):
+        """
+        Allow trading to resume without resetting the peak equity.
+        Useful if user manually cleared positions and wants to continue.
+        """
+        self.trading_halted = False

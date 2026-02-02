@@ -365,3 +365,15 @@ class WeexExecutionAdapter:
         """Get trade history / fills"""
         sym = symbol or self.symbol
         return self._get("/capi/v2/trade/fills", {"symbol": sym})
+
+    def cancel_all_plan_orders(self, symbol: str = None) -> dict:
+        """
+        Cancel all trigger (plan) orders for a symbol.
+        Used to clear TP/SL orders that block leverage changes.
+        """
+        sym = symbol or self.symbol
+        body = {
+            "symbol": sym,
+            "cancelOrderType": "plan"
+        }
+        return self._post("/capi/v2/order/cancelAllOrders", body)

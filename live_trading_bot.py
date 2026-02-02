@@ -61,7 +61,7 @@ class SentinelLiveTradingBot:
                  max_position_size: float = 0.01,
                  cooldown_seconds: int = 300,
                  max_drawdown_pct: float = 0.02,
-                 min_confidence: float = 0.60,
+                 min_confidence: float = 0.60,  # Raised to 0.70 for Trend Following
                  data_window: int = 100,
                  dry_run: bool = False):
         
@@ -105,7 +105,7 @@ class SentinelLiveTradingBot:
         self.high_conviction_logger = JsonLogger("logs/high_conviction_signals.jsonl")
         
         self.tpsl_calculator = TPSLCalculator(
-            min_rr_ratio=1.2, max_rr_ratio=3.0, base_sl_multiplier=1.0, base_tp_multiplier=2.0
+            min_rr_ratio=1.2, max_rr_ratio=3.0, base_sl_multiplier=1.0, base_tp_multiplier=1.0
         )
         
         self.ai_log_adapter = AILogAdapter(
@@ -164,7 +164,9 @@ class SentinelLiveTradingBot:
                  data_list = assets.get('data', [])
                  
              for asset in data_list:
-                 if asset.get('currency') == 'USDT' or asset.get('asset') == 'USDT':
+                 # Support both 'currency' (V1) and 'coinName' (V2/newer) keys
+                 asset_name = asset.get('currency', asset.get('coinName', asset.get('asset', '')))
+                 if asset_name == 'USDT':
                      val = asset.get('equity', asset.get('available', 1000))
                      self.current_equity = float(val)
                      break
@@ -230,7 +232,9 @@ class SentinelLiveTradingBot:
             elif isinstance(assets, dict):
                 data_list = assets.get('data', [])
             for asset in data_list:
-                if asset.get('currency') == 'USDT' or asset.get('asset') == 'USDT':
+                # Support both 'currency' (V1) and 'coinName' (V2/newer) keys
+                asset_name = asset.get('currency', asset.get('coinName', asset.get('asset', '')))
+                if asset_name == 'USDT':
                     val = asset.get('equity', asset.get('available', self.current_equity))
                     self.current_equity = float(val)
                     break
@@ -361,43 +365,33 @@ class SentinelLiveTradingBot:
 
     def determine_trade_class(self, regime: str, confidence: float) -> str:
         regime_upper = str(regime).upper()
-        if regime_upper.startswith("TREND") and confidence >= 0.66:
+        # Stricter classification for Trend Following
+        if regime_upper.startswith("TREND") and confidence >= 0.75:
             return "HIGH_CONF_TREND"
         if regime_upper.startswith("TREND"):
             return "TREND"
-        if regime_upper == "VOLATILITY_COMPRESSION":
-            return "SCALP"
-        return "SCALP"
+        return "SCALP"  # Only highest conviction scalps will pass filters
 
     def resolve_leverage(self, confidence: float, regime: str) -> Optional[int]:
         """
-        Confidence/regime-based leverage resolver with hard caps (10x-20x for 0.65+ threshold).
-        Returns None when the trade should be rejected.
+        Confidence/regime-based leverage resolver.
+        Trend Following: Conservative leverage to withstand volatility.
         """
         if confidence < self.min_confidence:
             return None
             
-        regime_upper = str(regime).upper()
+        # TREND FOLLOWER LEVERAGE TIERS
+        # 0.70 - 0.75: 7x
+        # 0.75 - 0.85: 10x
+        # > 0.85: 15x
         
-        # Conservative mapping for learning phase (reduced from 12/15/20x)
-        # With wider SL (1.8-3.0%), lower leverage reduces account risk
-        if confidence < 0.66:
-            leverage = 6   # Base tier (was 12x) - conservative during learning
-        elif confidence < 0.70:
-            leverage = 8   # Strong confidence (was 15x)
+        if confidence < 0.75:
+            leverage = 7
+        elif confidence < 0.85:
+            leverage = 10
         else:
-            leverage = 12  # Exceptional confidence (was 20x, capped for safety)
+            leverage = 15
             
-        # Boost for TRENDING markets (these are typically highest conviction)
-        # Reduced boost from +5 to +3 for conservative approach
-        if regime_upper.startswith("TREND") and confidence >= 0.66:
-            leverage = min(leverage + 3, 15)  # Cap at 15x instead of MAX_LEVERAGE (20x)
-            
-        # Safety cap for compression/noise to prevent high-leverage whipsaws
-        if regime_upper == "VOLATILITY_COMPRESSION":
-            leverage = min(leverage, 15)  # Max 15x for compression
-            
-        leverage = max(leverage, 12)  # Floor at 12x for 0.66+ signals
         leverage = min(leverage, WeexExecutionAdapter.MAX_LEVERAGE)
         return int(leverage)
 
@@ -459,8 +453,22 @@ class SentinelLiveTradingBot:
 
     def cleanup_inactive_trades(self):
         for sym in list(self.active_trades.keys()):
+            trades = self.active_trades.get(sym, [])
+            if not trades:
+                continue
+
             if abs(self.positions.get(sym, 0.0)) <= 0:
-                if self.active_trades.get(sym):
+                # Check if all trades are old enough to be considered "failed to fill" or "closed"
+                # We give a 5-minute grace period for limit orders to fill before wiping metadata.
+                now = time.time()
+                is_stale = True
+                for trade in trades:
+                    entry_time = trade.get('entry_time', 0)
+                    if (now - entry_time) < 300:  # 5 minutes grace
+                        is_stale = False
+                        break
+                
+                if is_stale:
                     self.active_trades[sym] = []
 
     def current_portfolio_risk(self) -> float:
@@ -480,16 +488,13 @@ class SentinelLiveTradingBot:
 
         active = self.active_trades.get(symbol, [])
         existing_pos = self.positions.get(symbol, 0.0)
+        
+        
+        # REMOVED: TURBO FLIP logic - no longer aggressively flipping positions
+        
         if abs(existing_pos) > 0 and len(active) == 0:
             logger.warning(f"Blocked trade: live position detected for {symbol} with no metadata.")
             return False
-
-        # NEW: High-confidence position flip override
-        if active and confidence >= 0.65:
-            existing_dir = active[0].get('direction')
-            if existing_dir and existing_dir != direction:
-                logger.info(f"✓ [{symbol}] High-conviction flip allowed (conf={confidence:.1%}, {existing_dir}→{direction})")
-                return True  # Allow position flip on strong signal
 
         # NEW: Time-based position timeout (prevent eternal gridlock)
         for trade in active:
@@ -505,10 +510,6 @@ class SentinelLiveTradingBot:
 
         trend_trades = [t for t in active if t.get('trade_class') != "SCALP"]
         if trend_trades:
-            directions = {t.get('direction') for t in trend_trades}
-            if directions and direction not in directions:
-                logger.warning(f"Blocked trade: conflicting direction for {symbol}.")
-                return False
             if len(trend_trades) >= 2:
                 logger.warning(f"Blocked trade: trend cap reached for {symbol}.")
                 return False
@@ -576,87 +577,66 @@ class SentinelLiveTradingBot:
 
         for trade in trades:
             direction = trade.get('direction')
-            full_size = trade.get('size', 0.0)
-            atr = trade.get('atr', 0.0)
-            entry_price = trade.get('entry_price', 0.0)
-            sl_price = trade.get('stop_loss', 0.0)
-            entry_time = trade.get('entry_time', 0.0)
-            breakeven_trigger = trade.get('breakeven_trigger')
+            full_size = trade.get('size') or 0.0
+            entry_price = trade.get('entry_price') or 0.0
             
-            if full_size <= 0 or atr <= 0 or direction not in ['LONG', 'SHORT']:
+            if not direction or full_size <= 0 or entry_price <= 0 or direction not in ['LONG', 'SHORT']:
                 continue
 
-            # 1. Delayed SL Activation (Noise-Absorption)
-            if not trade.get('sl_placed'):
-                price_move = abs(current_price - entry_price)
-                time_in_trade = time.time() - entry_time
-                
-                if time_in_trade >= 3.0 or price_move >= (0.4 * atr):
-                    rounded_size, _, _ = self.round_size_to_rules(symbol, full_size)
-                    sl_price_rounded = self.round_price_to_step(sl_price, price_step)
-                    
-                    logger.info(f"[{symbol}] Noise-absorption over. Placing SL at {sl_price_rounded} for {rounded_size}")
-                    self.adapter.symbol = symbol
-                    sl_res = self.adapter.place_tp_sl_order('loss_plan', sl_price_rounded, rounded_size, 'long' if direction == 'LONG' else 'short')
-                    if self._tp_sl_success(sl_res):
-                        trade['sl_placed'] = True
-                    else:
-                        logger.warning(f"Delayed SL placement failed for {symbol}: {sl_res}")
+            # Skip if current_price is invalid
+            if current_price is None or current_price <= 0:
                 continue
 
-            # 2. Tiered Trailing Stops (Profit Protection)
             # Calculate current ROI
             if direction == 'LONG':
                 roi_pct = ((current_price - entry_price) / entry_price) * 100
             else:  # SHORT
                 roi_pct = ((entry_price - current_price) / entry_price) * 100
             
-            # Determine profit lock tier based on ROI
-            if roi_pct >= 25:
-                lock_tier = 5  # Lock 8%
-            elif roi_pct >= 20:
-                lock_tier = 4  # Lock 5%
-            elif roi_pct >= 15:
-                lock_tier = 3  # Lock 3%
-            elif roi_pct >= 10:
-                lock_tier = 2  # Lock 1%
-            elif roi_pct >= 5:
-                lock_tier = 1  # Breakeven
+            # --- BLITZ-SCALP PROFIT LOCKING ---
+            # 2% ROI -> BE (0.1% buffer)
+            # 5% ROI -> 1% Locked
+            # 10% ROI -> 3% Locked
+            
+            if roi_pct >= 10.0:
+                lock_tier = 3
+                locked_profit_pct = 3.0
+            elif roi_pct >= 5.0:
+                lock_tier = 2
+                locked_profit_pct = 1.0
+            elif roi_pct >= 2.0:
+                lock_tier = 1
+                locked_profit_pct = 0.1  # Breakeven + buffer
             else:
-                lock_tier = 0  # No protection yet
+                lock_tier = 0
             
             current_tier = trade.get('profit_lock_tier', 0)
             
             # Only upgrade (never downgrade) protection
             if lock_tier > current_tier:
-                # Calculate new SL price based on tier
-                tier_profit_pcts = {0: None, 1: 0.0, 2: 1.0, 3: 3.0, 4: 5.0, 5: 8.0}
-                new_sl_profit_pct = tier_profit_pcts.get(lock_tier, 0.0)
+                # Calculate new SL price
+                if direction == 'LONG':
+                    new_sl = entry_price * (1 + locked_profit_pct / 100)
+                else:  # SHORT
+                    new_sl = entry_price * (1 - locked_profit_pct / 100)
                 
-                if new_sl_profit_pct is not None:
-                    # Calculate new SL price
-                    if direction == 'LONG':
-                        new_sl = entry_price * (1 + new_sl_profit_pct / 100)
-                    else:  # SHORT
-                        new_sl = entry_price * (1 - new_sl_profit_pct / 100)
-                    
-                    # Round to price step
-                    new_sl_rounded = self.round_price_to_step(new_sl, price_step)
-                    rounded_size, _, _ = self.round_size_to_rules(symbol, full_size)
-                    
-                    # Place new SL
-                    self.adapter.symbol = symbol
-                    result = self.adapter.place_tp_sl_order('loss_plan', new_sl_rounded, rounded_size, 'long' if direction == 'LONG' else 'short')
-                    
-                    if self._tp_sl_success(result):
-                        trade['profit_lock_tier'] = lock_tier
-                        trade['locked_profit_pct'] = new_sl_profit_pct
-                        tier_name = {1: "Breakeven", 2: "1% Lock", 3: "3% Lock", 4: "5% Lock", 5: "8% Lock"}.get(lock_tier, "")
-                        logger.info(f"🔒 [{symbol}] {tier_name}: SL→{new_sl_rounded} ({new_sl_profit_pct:+.1f}% locked, ROI: {roi_pct:.1f}%)")
-                    else:
-                        logger.warning(f"[{symbol}] Failed to upgrade SL to tier {lock_tier}: {result}")
-
-
+                # Round to price step and size step
+                new_sl_rounded = self.round_price_to_step(new_sl, price_step)
+                rounded_size, _, _ = self.round_size_to_rules(symbol, full_size)
+                
+                logger.info(f"🔒 [{symbol}] Turbo Lock Tier {lock_tier} (ROI: {roi_pct:.2f}%). Moving SL to {new_sl_rounded}")
+                
+                # Execute stop loss update
+                self.adapter.symbol = symbol
+                sl_res = self.adapter.place_tp_sl_order('loss_plan', new_sl_rounded, rounded_size, 'long' if direction == 'LONG' else 'short')
+                
+                if self._tp_sl_success(sl_res):
+                    trade['profit_lock_tier'] = lock_tier
+                    trade['stop_loss'] = new_sl_rounded
+                    logger.info(f"   ✓ Turbo SL update successful for {symbol} tier {lock_tier}")
+                else:
+                    logger.error(f"   ❌ Turbo SL update failed for {symbol}: {sl_res}")
+                     
     def fetch_tick(self, symbol: str):
         ticker = self.adapter.get_ticker(symbol)
         data = {
@@ -675,12 +655,19 @@ class SentinelLiveTradingBot:
         print(f"\n{Colors.GREEN}Starting Cycle Loop...{Colors.END}")
         while True:
             try:
-                if not self.pnl_guard.can_trade():
-                    logger.warning("Trading halted due to drawdown guard. Sleeping 30s.")
-                    time.sleep(30)
-                    continue
-                
+                # ALWAYS update state even if halted, so we can detect recovery
                 self.cleanup_inactive_trades()
+                
+                # Check for recovery: if halted but no positions, allow reset
+                if not self.pnl_guard.can_trade():
+                    open_positions = sum(1 for p in self.positions.values() if abs(p) > 0)
+                    if open_positions == 0:
+                        logger.info("Drawdown Guard: No positions active. Resetting guard to resume trading.")
+                        self.pnl_guard.reset()
+                    else:
+                        logger.warning(f"Trading halted due to drawdown guard ({open_positions} positions still open). Sleeping 30s.")
+                        time.sleep(30)
+                        continue
 
                 for symbol in self.symbols:
                     try:
@@ -692,9 +679,9 @@ class SentinelLiveTradingBot:
                         logger.error(f"Tick error {symbol}: {e}")
                         continue
                         
-                    if len(self.market_data[symbol]) < 20:
-                        if len(self.market_data[symbol]) % 10 == 0:
-                            print(f"[{symbol}] Warming: {len(self.market_data[symbol])}/20")
+                    if len(self.market_data[symbol]) < 14:
+                        if len(self.market_data[symbol]) % 5 == 0:
+                            print(f"[{symbol}] Warming: {len(self.market_data[symbol])}/14")
                         continue
                         
                     df = pd.DataFrame(self.market_data[symbol])
@@ -767,6 +754,11 @@ class SentinelLiveTradingBot:
                         if self.loop_count % 360 == 0:  # Every 360 cycles = ~1 hour
                             logger.info("🔄 Running periodic hedge consolidation...")
                             self.consolidate_hedged_positions()
+                        
+                        # SAFETY CHECK: Verify SLs & TPs exist for all positions
+                        if self.loop_count % 12 == 0: # Every ~2 minutes
+                             self.check_and_fix_plans()
+                             
                     except: pass
                     open_positions = len([p for p in self.positions.values() if abs(p) > 0])
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] 💓 Cycle Active | Equity: ${self.current_equity:.2f} | Positions: {open_positions}")
@@ -778,9 +770,190 @@ class SentinelLiveTradingBot:
                 logger.error(f"Loop error: {e}")
                 time.sleep(5)
 
+    def check_and_fix_plans(self):
+        """
+        SAFETY NET: Comprehensive check for both SL and TP orders.
+        Ensures exactly 1 SL and 1 TP exists per active position.
+        Auto-cleans redundancies and restores missing orders.
+        """
+        try:
+            # 1. Get Positions
+            positions = self.adapter.get_positions()
+            data_list = positions if isinstance(positions, list) else positions.get('data', [])
+            active_pos_map = {}
+            
+            for pos in data_list:
+                sym = pos.get('symbol')
+                size = float(pos.get('holdAmount', pos.get('size', 0)))
+                side = str(pos.get('side', '')).upper()
+                avg_price = float(pos.get('avgPrice', 0))
+                
+                if abs(size) > 0 and sym in self.symbols:
+                    active_pos_map[sym] = {
+                        'size': abs(size),
+                        'side': 'SHORT' if side == 'SHORT' else 'LONG',
+                        'entry': avg_price
+                    }
+
+            if not active_pos_map:
+                return
+
+            # 2. Iterate Active Positions
+            for sym, pos_data in active_pos_map.items():
+                self.adapter.symbol = sym
+                
+                # Fetch Current Plans
+                plans = self.adapter._get("/capi/v2/order/currentPlan", {"symbol": sym})
+                p_list = []
+                if plans:
+                    p_list = plans if isinstance(plans, list) else plans.get('data', [])
+
+                sl_orders = []
+                tp_orders = []
+                
+                # Classify Orders
+                for p in p_list:
+                    status = p.get('status')
+                    if status not in ['active', 'new', 'UNTRIGGERED', 'NEW']:
+                        continue
+
+                    ptype = p.get('planType')
+                    otype = p.get('type')
+                    trigger = float(p.get('triggerPrice', 0))
+                    entry = pos_data['entry']
+                    side = pos_data['side']
+                    
+                    is_sl = False
+                    is_tp = False
+
+                    # Explicit Type Check
+                    if ptype == 'loss_plan': is_sl = True
+                    elif ptype == 'profit_plan': is_tp = True
+                    
+                    # Infer for V2 API (Close Type)
+                    elif otype in ['CLOSE_LONG', 'CLOSE_SHORT']:
+                        if side == 'LONG':
+                            if trigger < entry: is_sl = True
+                            elif trigger > entry: is_tp = True
+                        elif side == 'SHORT':
+                            if trigger > entry: is_sl = True
+                            elif trigger < entry: is_tp = True
+                    
+                    if is_sl: sl_orders.append(p)
+                    if is_tp: tp_orders.append(p)
+
+                # --- REDUNDANCY CHECKS ---
+                # If we have multiples of either, we NUKE EVERYTHING and start fresh.
+                # It's cleaner than trying to delete specific IDs which might fail.
+                if len(sl_orders) > 1 or len(tp_orders) > 1:
+                    logger.warning(f"🚨 [{sym}] REDUNDANCY DETECTED: {len(sl_orders)} SLs, {len(tp_orders)} TPs. Nuking to reset.")
+                    self.adapter.cancel_all_plan_orders(sym)
+                    # Reset lists to force replacement below
+                    sl_orders = []
+                    tp_orders = []
+
+                # --- MISSING ORDER CHECKS ---
+                
+                # Fetch Current Market Price for Validation
+                try:
+                    ticker = self.adapter.get_ticker(sym)
+                    current_price = float(ticker['last'])
+                except:
+                    current_price = 0
+
+                # 1. Check/Place STOP LOSS
+                if not sl_orders:
+                    logger.warning(f"🚨 [{sym}] MISSING SL! Placing Default SL.")
+                    
+                    # Entry Calculation Fallback
+                    entry = pos_data['entry']
+                    if entry == 0:
+                        # Try to derive from open_value/size if available in raw data? 
+                        # We don't have raw pos dict here easily, but we can trust current_price as fallback
+                        if current_price > 0:
+                            entry = current_price
+                    
+                    if entry > 0:
+                        sl_pct = 0.02 # 2% SL
+                        direction = pos_data['side']
+                        
+                        if direction == 'LONG':
+                            sl_price = entry * (1 - sl_pct)
+                            # VALIDATION: SL must be < Current Price
+                            if current_price > 0 and sl_price >= current_price:
+                                sl_price = current_price * 0.99
+                            sl_side = 'long'
+                        else:
+                            sl_price = entry * (1 + sl_pct)
+                            # VALIDATION: SL must be > Current Price
+                            if current_price > 0 and sl_price <= current_price:
+                                sl_price = current_price * 1.01
+                            sl_side = 'short'
+                            
+                        sl_price = self.round_price_to_step(sl_price, float(self.symbol_rules.get(sym, {}).get('price_step', 0.1)))
+                        size = pos_data['size']
+                        
+                        logger.info(f"   🆘 Placing SL for {sym} at {sl_price}")
+                        res = self.adapter.place_tp_sl_order('loss_plan', sl_price, size, sl_side)
+                        logger.info(f"   👉 SL Result for {sym}: {res}")
+                
+                # 2. Check/Place TAKE PROFIT
+                if not tp_orders:
+                    logger.warning(f"🚨 [{sym}] MISSING TP! Placing Default TP.")
+                    
+                    entry = pos_data['entry']
+                    # Use Same Fallback
+                    if entry == 0 and current_price > 0:
+                         entry = current_price
+                         
+                    if entry > 0:
+                        tp_pct = 0.04 # 4% TP
+                        direction = pos_data['side']
+                        
+                        if direction == 'LONG':
+                            tp_price = entry * (1 + tp_pct)
+                            # VALIDATION: TP must be > Current Price
+                            if current_price > 0 and tp_price <= current_price:
+                                tp_price = current_price * 1.01
+                            tp_side = 'long'
+                        else:
+                            tp_price = entry * (1 - tp_pct)
+                            # VALIDATION: TP must be < Current Price
+                            if current_price > 0 and tp_price >= current_price:
+                                tp_price = current_price * 0.99
+                            tp_side = 'short'
+                            
+                        tp_price = self.round_price_to_step(tp_price, float(self.symbol_rules.get(sym, {}).get('price_step', 0.1)))
+                        size = pos_data['size']
+                        
+                        logger.info(f"   💰 Placing TP for {sym} at {tp_price}")
+                        res = self.adapter.place_tp_sl_order('profit_plan', tp_price, size, tp_side)
+                        logger.info(f"   👉 TP Result for {sym}: {res}")
+
+
+        except Exception as e:
+            logger.error(f"Error in Plan Safety Net: {e}")
+
     def execute_trade(self, symbol, direction, confidence, price, signal_data, trade_class: str, applied_leverage: int, risk_pct: float):
         try:
             self.adapter.symbol = symbol
+            
+            # --- PRE-TRADE CLEANUP (Forced Flips & Margin Recovery) ---
+            active_trades = self.active_trades.get(symbol, [])
+            if active_trades:
+                logger.info(f"🧹 [{symbol}] Pre-Flip Cleanup: Canceling orders and closing old position.")
+                try:
+                    # 1. Cancel any trigger orders that block leverage changes
+                    self.adapter.cancel_all_plan_orders(symbol)
+                    # 2. Close position to free margin
+                    self.adapter.close_all_positions(symbol)
+                    # 3. Clear local metadata
+                    self.active_trades[symbol] = []
+                    # Wait briefly for server state sync
+                    time.sleep(0.5)
+                except Exception as e:
+                    logger.error(f"Cleanup failure for {symbol}: {e}")
+
             if self.last_leverage.get(symbol) != applied_leverage:
                 self.adapter.leverage = applied_leverage
                 self.adapter.set_leverage()
